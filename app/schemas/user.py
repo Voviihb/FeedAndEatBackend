@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
+from uuid import UUID
 
 
 class UserCreate(BaseModel):
@@ -8,13 +10,18 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    id: str
+    id: UUID
     email: EmailStr
     username: str
     is_active: bool
+    avatar_url: Optional[str] = None
+    about_me: Optional[str] = None
+    is_profile_private: bool
+    theme_settings: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class UserLogin(BaseModel):
@@ -25,3 +32,10 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer" 
+
+
+class ProfileUpdate(BaseModel):
+    avatar_url: Optional[str] = None
+    about_me: Optional[str] = None
+    is_profile_private: Optional[bool] = None
+    theme_settings: Optional[str] = None 

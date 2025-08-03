@@ -14,5 +14,11 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+
+    avatar_url = Column(String, nullable=True)
+    about_me = Column(String, nullable=True)
+    is_profile_private = Column(Boolean, default=False)
+    theme_settings = Column(String, default="light")
+
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow) 

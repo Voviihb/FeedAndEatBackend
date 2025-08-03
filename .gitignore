@@ -1,0 +1,46 @@
+# ---------- Python backend ignore patterns ----------
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+*.venv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Logs & coverage
+*.log
+coverage.*
+.htmlcov/
+
+# Testing / cache
+.pytest_cache/
+
+# Environment variables & settings
+.env
+.env.*
+
+# IDE / Editor
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.swp
+*.swo
+*~ 
+media/ 
