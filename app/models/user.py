@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
@@ -21,4 +22,7 @@ class User(Base):
     theme_settings = Column(String, default="light")
 
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow) 
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    recipes = relationship("Recipe", back_populates="author")
+    collections = relationship("Collection", back_populates="owner", cascade="all,delete") 
