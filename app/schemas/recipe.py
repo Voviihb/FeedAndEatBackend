@@ -52,4 +52,25 @@ class RecipeRead(RecipeBase):
 
     model_config = {
         "from_attributes": True,
-    } 
+    }
+
+
+# ---- Search params ----
+
+
+class SearchParams(BaseModel):
+    q: Optional[str] = None
+    calories_min: Optional[float] = None
+    calories_max: Optional[float] = None
+    protein_min: Optional[float] = None
+    protein_max: Optional[float] = None
+    fat_min: Optional[float] = None
+    fat_max: Optional[float] = None
+    carbs_min: Optional[float] = None
+    carbs_max: Optional[float] = None
+    sugar_min: Optional[float] = None
+    sugar_max: Optional[float] = None
+    tags: Optional[List[str]] = None  # OR semantics
+    sort: Optional[str] = "new"  # new, rating, popularity
+    limit: int = 20
+    offset: int = 0 
