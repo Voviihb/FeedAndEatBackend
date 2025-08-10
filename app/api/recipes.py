@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, and_, text
+from sqlalchemy import select, func, desc, and_, text, or_
 
 from app.core.database import get_session
 from app.core.config import settings
@@ -21,9 +21,9 @@ router = APIRouter()
 
 @router.post("/", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
 async def create_recipe(
-    data: RecipeCreate,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        data: RecipeCreate,
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ):
     recipe_data = data.model_dump()
     recipe_data["user_id"] = current_user.id
@@ -36,10 +36,10 @@ async def create_recipe(
 
 @router.post("/{recipe_id}/image", response_model=RecipeRead)
 async def upload_recipe_image(
-    recipe_id: uuid.UUID,
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        recipe_id: uuid.UUID,
+        file: UploadFile = File(...),
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ):
     # Проверяем, что рецепт существует и принадлежит текущему пользователю
     res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
@@ -71,13 +71,59 @@ async def upload_recipe_image(
     return recipe
 
 
-@router.get("/{recipe_id}", response_model=RecipeRead)
-async def get_recipe(recipe_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
-    res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
-    recipe: Optional[Recipe] = res.scalar()
-    if recipe is None:
-        raise HTTPException(status_code=404, detail="Recipe not found")
-    return recipe
+# ---- Search / filter ----
+@router.get("/search", response_model=List[RecipeRead])
+async def search_recipes(
+        q: Optional[str] = Query(None, description="Поисковая строка"),
+        tags: Optional[List[str]] = Query(None, description="Список тегов (OR)"),
+        calories_min: Optional[float] = Query(None),
+        calories_max: Optional[float] = Query(None),
+        protein_min: Optional[float] = Query(None),
+        protein_max: Optional[float] = Query(None),
+        fat_min: Optional[float] = Query(None),
+        fat_max: Optional[float] = Query(None),
+        carbs_min: Optional[float] = Query(None),
+        carbs_max: Optional[float] = Query(None),
+        sugar_min: Optional[float] = Query(None),
+        sugar_max: Optional[float] = Query(None),
+        sort: str = Query("new", enum=["new", "rating", "popularity"]),
+        limit: int = Query(20, le=100),
+        offset: int = Query(0, ge=0),
+        session: AsyncSession = Depends(get_session),
+):
+    stmt = select(Recipe)
+
+    if q:
+        stmt = stmt.where(Recipe.name.ilike(f"%{q}%"))
+
+    if tags:
+        tag_filters = [Recipe.tags.contains([tag]) for tag in tags]
+        stmt = stmt.where(or_(*tag_filters))
+
+    def between(json_key: str, min_val: Optional[float], max_val: Optional[float]):
+        nonlocal stmt
+        if min_val is not None:
+            stmt = stmt.where(Recipe.nutrients[json_key].as_float() >= min_val)  # type: ignore
+        if max_val is not None:
+            stmt = stmt.where(Recipe.nutrients[json_key].as_float() <= max_val)  # type: ignore
+
+    between("Calories", calories_min, calories_max)
+    between("Protein", protein_min, protein_max)
+    between("Fat", fat_min, fat_max)
+    between("Carbohydrates", carbs_min, carbs_max)
+    between("Sugar", sugar_min, sugar_max)
+
+    if sort == "new":
+        stmt = stmt.order_by(desc(Recipe.created_at))
+    elif sort == "rating":
+        stmt = stmt.order_by(desc(Recipe.rating))
+    elif sort == "popularity":
+        stmt = stmt.order_by(desc(Recipe.cooked))
+
+    stmt = stmt.offset(offset).limit(limit)
+
+    res = await session.execute(stmt)
+    return res.scalars().all()
 
 
 # ---- Подборки ----
@@ -100,9 +146,9 @@ async def latest_recipes(limit: int = Query(10, le=100), session: AsyncSession =
 
 @router.get("/low_calorie", response_model=List[RecipeRead])
 async def low_calorie_recipes(
-    max_calories: float = Query(100.0),
-    limit: int = Query(10, le=100),
-    session: AsyncSession = Depends(get_session),
+        max_calories: float = Query(100.0),
+        limit: int = Query(10, le=100),
+        session: AsyncSession = Depends(get_session),
 ):
     # nutrients ->> 'Calories' as numeric <= max_calories
     stmt = (
@@ -114,4 +160,13 @@ async def low_calorie_recipes(
         .limit(limit)
     )
     res = await session.execute(stmt)
-    return res.scalars().all() 
+    return res.scalars().all()
+
+
+@router.get("/{recipe_id}", response_model=RecipeRead)
+async def get_recipe(recipe_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+    res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe: Optional[Recipe] = res.scalar()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe

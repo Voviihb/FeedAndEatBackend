@@ -18,6 +18,8 @@ app.include_router(users_router.router, prefix="/users", tags=["users"])
 app.include_router(recipes_router.router, prefix="/recipes", tags=["recipes"])
 from app.api import collections as collections_router
 app.include_router(collections_router.router, prefix="/collections", tags=["collections"])
+from app.api import tags as tags_router
+app.include_router(tags_router.router, prefix="/tags", tags=["tags"])
 
 # Статика для загруженных медиа (аватары и др.)
 media_path = Path(settings.MEDIA_DIR)
