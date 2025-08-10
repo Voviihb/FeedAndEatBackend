@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -18,6 +19,10 @@ async def register(user_in: UserCreate, session: AsyncSession = Depends(get_sess
     if res.scalar():
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    res = await session.execute(select(User).where(User.username == user_in.username))
+    if res.scalar():
+        raise HTTPException(status_code=400, detail="Username already taken")
+
     hashed = get_password_hash(user_in.password)
     user = User(email=user_in.email, username=user_in.username, hashed_password=hashed)
     session.add(user)
@@ -33,6 +38,24 @@ async def login(user_in: UserLogin, session: AsyncSession = Depends(get_session)
     res = await session.execute(select(User).where(User.email == user_in.email))
     user: Optional[User] = res.scalar()
     if user is None or not verify_password(user_in.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    access_token = create_access_token({"sub": str(user.id)})
+    return Token(access_token=access_token)
+
+
+# --- OAuth2 token endpoint ---
+
+
+@router.post("/token", response_model=Token)
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_session),
+):
+    # В поле username передаём email
+    res = await session.execute(select(User).where(User.email == form_data.username))
+    user: Optional[User] = res.scalar()
+    if user is None or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     access_token = create_access_token({"sub": str(user.id)})
