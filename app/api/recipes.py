@@ -15,6 +15,7 @@ from app.models.recipe import Recipe
 from app.schemas.recipe import RecipeCreate, RecipeRead
 from app.models.user import User
 from app.core.security import get_current_user
+from app.models.daily_recipe import DailyRecipe
 
 router = APIRouter()
 
@@ -161,6 +162,22 @@ async def low_calorie_recipes(
     )
     res = await session.execute(stmt)
     return res.scalars().all()
+
+
+@router.get("/daily", response_model=RecipeRead)
+async def get_daily_recipe(session: AsyncSession = Depends(get_session)):
+    from datetime import datetime
+    day = datetime.utcnow().timetuple().tm_yday
+    res = await session.execute(select(DailyRecipe).where(DailyRecipe.day_of_year == day))
+    dr = res.scalar()
+    if dr is None:
+        raise HTTPException(status_code=404, detail="Daily recipe not set")
+    res = await session.execute(select(Recipe).where(Recipe.id == dr.recipe_id))
+    recipe = res.scalar()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    return recipe
 
 
 @router.get("/{recipe_id}", response_model=RecipeRead)

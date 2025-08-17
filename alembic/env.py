@@ -13,6 +13,8 @@ import app.models.user  # noqa
 import app.models.recipe  # noqa
 import app.models.collection  # noqa
 import app.models.tag  # noqa
+import app.models.daily_recipe  # noqa
+import app.models.device_token  # noqa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
