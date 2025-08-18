@@ -23,7 +23,7 @@ def upgrade() -> None:
     # Индексы могли отсутствовать в новой базе, поэтому удаляем условно
     op.execute("DROP INDEX IF EXISTS ix_users_email")
     op.execute("DROP INDEX IF EXISTS ix_users_username")
-    op.drop_table('users')
+    op.execute("DROP TABLE IF EXISTS users CASCADE")
     # ### end Alembic commands ###
 
 
