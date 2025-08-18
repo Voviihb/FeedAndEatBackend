@@ -35,18 +35,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime, server_default=sa.text("now()")),
     )
 
-    # ---- association collection_recipes --------------------------------
-    op.create_table(
-        "collection_recipes",
-        sa.Column("collection_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("collections.id", ondelete="CASCADE"),
-                  primary_key=True),
-        sa.Column("recipe_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("recipes.id", ondelete="CASCADE"),
-                  primary_key=True),
-    )
-
 
 def downgrade() -> None:
-    op.drop_table("collection_recipes")
     op.drop_table("recipes")
