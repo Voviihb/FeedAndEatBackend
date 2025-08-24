@@ -61,12 +61,21 @@ jobs:
 
           # перезапуск сервиса
           sudo -n systemctl restart feedandeat
-
-          # ждём завершения перехода в нужный статус из activating
-          sudo -n systemctl --no-pager --quiet --wait start feedandeat
           
           # проверяем статус
-          if ! sudo -n systemctl is-active --quiet feedandeat; then
+          for i in {1..30}; do
+            state=$(sudo -n systemctl is-active feedandeat || true)
+            if [ "$state" = "active" ]; then
+              echo "Service is active"
+              break
+            elif [ "$state" = "failed" ]; then
+              echo "Service failed during start"
+              break
+            fi
+            sleep 1
+          done
+          
+          if [ "$state" != "active" ]; then
             echo "feedandeat service failed to start. Last 100 log lines:" >&2
             sudo -n journalctl -u feedandeat.service -n 100 --no-pager >&2 || true
             exit 1
