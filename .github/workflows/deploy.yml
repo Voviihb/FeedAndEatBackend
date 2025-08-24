@@ -43,11 +43,12 @@ jobs:
           set -e
           cd /home/deploy/feedandeat
 
-          # создаем venv, если его ещё нет
-          if [ ! -d venv ]; then
-            python3 -m venv venv
-          fi
+          # создаем venv
+          python3 -m venv venv
           source venv/bin/activate
+          
+          # зависимости
+          pip install -r requirements.txt
 
           # загружаем переменные в текущую сессию
           cp /home/deploy/.env /home/deploy/feedandeat
@@ -55,11 +56,15 @@ jobs:
           source .env
           set +a
 
-          # зависимости
-          pip install -r requirements.txt --quiet
-
           # миграции
           alembic upgrade head
 
           # перезапуск сервиса
           sudo systemctl restart feedandeat
+
+          # проверяем, что сервис запущен корректно
+          if ! sudo systemctl is-active --quiet feedandeat; then
+            echo "feedandeat service failed to start. Last 100 log lines:" >&2
+            sudo journalctl -u feedandeat.service -n 100 --no-pager >&2
+            exit 1
+          fi
