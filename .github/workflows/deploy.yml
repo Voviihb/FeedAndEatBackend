@@ -49,6 +49,12 @@ jobs:
           fi
           source venv/bin/activate
 
+          # загружаем переменные в текущую сессию
+          cp /home/deploy/.env /home/deploy/feedandeat
+          set -a
+          source .env
+          set +a
+
           # зависимости
           pip install -r requirements.txt --quiet
 
