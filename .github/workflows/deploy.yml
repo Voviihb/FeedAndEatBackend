@@ -38,9 +38,22 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
+        script_stop: true
         script: |
-          cd /home/deploy/feedandeat/FeedAndEatBackend
-          source ~/feedandeat/venv/bin/activate || python -m venv ~/feedandeat/venv && source ~/feedandeat/venv/bin/activate
+          set -e
+          cd /home/deploy/feedandeat
+
+          # создаем venv, если его ещё нет
+          if [ ! -d venv ]; then
+            python3 -m venv venv
+          fi
+          source venv/bin/activate
+
+          # зависимости
           pip install -r requirements.txt --quiet
+
+          # миграции
           alembic upgrade head
+
+          # перезапуск сервиса
           sudo systemctl restart feedandeat
