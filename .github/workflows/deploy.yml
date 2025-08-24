@@ -60,12 +60,12 @@ jobs:
           alembic upgrade head
 
           # перезапуск сервиса
-          sudo systemctl restart feedandeat
+          sudo -n systemctl restart feedandeat
 
           # ждём завершения перехода в нужный статус из activating
-          sudo systemctl --no-pager --quiet --wait start feedandeat
+          sudo -n systemctl --no-pager --quiet --wait start feedandeat
           
-          # проверяем, что сервис запущен корректно
+          # проверяем статус
           if ! sudo -n systemctl is-active --quiet feedandeat; then
             echo "feedandeat service failed to start. Last 100 log lines:" >&2
             sudo -n journalctl -u feedandeat.service -n 100 --no-pager >&2 || true
