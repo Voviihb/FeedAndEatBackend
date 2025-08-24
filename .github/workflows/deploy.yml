@@ -28,10 +28,11 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        source: "FeedAndEatBackend/*"
+        source: "FeedAndEatBackend/**"
         target: "/home/voviihb/feedandeat/"
+        rm: true
 
-    - name: Run deploy commands over SSH
+    - name: Run deployment commands over SSH
       uses: appleboy/ssh-action@v0.1.7
       with:
         host: ${{ secrets.SERVER_IP }}
