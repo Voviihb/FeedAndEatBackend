@@ -28,7 +28,7 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        source: "FeedAndEatBackend/**"
+        source: "."
         target: "/home/voviihb/feedandeat/"
         rm: true
 
