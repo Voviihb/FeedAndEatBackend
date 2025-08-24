@@ -29,7 +29,7 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         source: "."
-        target: "/home/voviihb/feedandeat/"
+        target: "/home/deploy/feedandeat/"
         rm: true
 
     - name: Run deployment commands over SSH
@@ -39,7 +39,7 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          cd feedandeat/FeedAndEatBackend
+          cd /home/deploy/feedandeat/FeedAndEatBackend
           source ~/feedandeat/venv/bin/activate || python -m venv ~/feedandeat/venv && source ~/feedandeat/venv/bin/activate
           pip install -r requirements.txt --quiet
           alembic upgrade head
