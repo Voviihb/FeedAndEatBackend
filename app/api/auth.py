@@ -14,8 +14,11 @@ router = APIRouter()
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(user_in: UserCreate, session: AsyncSession = Depends(get_session)):
+    # Приводим email к нижнему регистру
+    email_lower = user_in.email.lower()
+    
     # Проверяем, что email ещё не занят
-    res = await session.execute(select(User).where(User.email == user_in.email))
+    res = await session.execute(select(User).where(User.email == email_lower))
     if res.scalar():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -24,7 +27,7 @@ async def register(user_in: UserCreate, session: AsyncSession = Depends(get_sess
         raise HTTPException(status_code=400, detail="Username already taken")
 
     hashed = get_password_hash(user_in.password)
-    user = User(email=user_in.email, username=user_in.username, hashed_password=hashed)
+    user = User(email=email_lower, username=user_in.username, hashed_password=hashed)
     session.add(user)
     await session.commit()
     await session.refresh(user)
@@ -35,7 +38,9 @@ async def register(user_in: UserCreate, session: AsyncSession = Depends(get_sess
 
 @router.post("/login", response_model=Token)
 async def login(user_in: UserLogin, session: AsyncSession = Depends(get_session)):
-    res = await session.execute(select(User).where(User.email == user_in.email))
+    # Приводим email к нижнему регистру
+    email_lower = user_in.email.lower()
+    res = await session.execute(select(User).where(User.email == email_lower))
     user: Optional[User] = res.scalar()
     if user is None or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -52,8 +57,9 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session),
 ):
-    # В поле username передаём email
-    res = await session.execute(select(User).where(User.email == form_data.username))
+    # В поле username передаём email, приводим к нижнему регистру
+    email_lower = form_data.username.lower()
+    res = await session.execute(select(User).where(User.email == email_lower))
     user: Optional[User] = res.scalar()
     if user is None or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
