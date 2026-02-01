@@ -170,13 +170,20 @@ async def get_daily_recipe(session: AsyncSession = Depends(get_session)):
     day = datetime.utcnow().timetuple().tm_yday
     res = await session.execute(select(DailyRecipe).where(DailyRecipe.day_of_year == day))
     dr = res.scalar()
-    if dr is None:
-        raise HTTPException(status_code=404, detail="Daily recipe not set")
-    res = await session.execute(select(Recipe).where(Recipe.id == dr.recipe_id))
+    
+    if dr is not None:
+        # Есть рецепт дня - возвращаем его
+        res = await session.execute(select(Recipe).where(Recipe.id == dr.recipe_id))
+        recipe = res.scalar()
+        if recipe is not None:
+            return recipe
+    
+    # Нет рецепта дня - возвращаем случайный рецепт
+    res = await session.execute(select(Recipe).order_by(func.random()).limit(1))
     recipe = res.scalar()
     if recipe is None:
-        raise HTTPException(status_code=404, detail="Recipe not found")
-
+        raise HTTPException(status_code=404, detail="No recipes found")
+    
     return recipe
 
 
@@ -187,3 +194,60 @@ async def get_recipe(recipe_id: uuid.UUID, session: AsyncSession = Depends(get_s
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
+
+
+@router.put("/{recipe_id}", response_model=RecipeRead)
+async def update_recipe(
+        recipe_id: uuid.UUID,
+        data: RecipeCreate,
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
+):
+    res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe: Optional[Recipe] = res.scalar()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    if recipe.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    
+    recipe_data = data.model_dump()
+    for key, value in recipe_data.items():
+        setattr(recipe, key, value)
+    
+    await session.commit()
+    await session.refresh(recipe)
+    return recipe
+
+
+@router.delete("/{recipe_id}")
+async def delete_recipe(
+        recipe_id: uuid.UUID,
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
+):
+    res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe: Optional[Recipe] = res.scalar()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    if recipe.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    
+    await session.delete(recipe)
+    await session.commit()
+    return {"detail": "Recipe deleted"}
+
+
+@router.post("/{recipe_id}/cooked")
+async def increment_cooked_counter(
+        recipe_id: uuid.UUID,
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
+):
+    res = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe: Optional[Recipe] = res.scalar()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    recipe.cooked += 1
+    await session.commit()
+    return {"detail": "Cooked counter incremented"}

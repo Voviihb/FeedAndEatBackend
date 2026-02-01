@@ -1,13 +1,26 @@
 from typing import List, Optional, Dict, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class Timer(BaseModel):
+    """Строгая схема для таймеров"""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    type: str  # "constant" или "range"
+    number: Optional[int] = None  # для type="constant"
+    lower_limit: Optional[int] = Field(None, alias="lowerLimit")  # для type="range"
+    upper_limit: Optional[int] = Field(None, alias="upperLimit")  # для type="range"
+
+    model_config = {
+        "populate_by_name": True,  # позволяет использовать как "lower_limit", так и "lowerLimit"
+    }
 
 
 class Instruction(BaseModel):
     paragraph: str
-    timers: Optional[List[Dict[str, Any]]] = None
+    timers: Optional[List[Timer]] = None
 
 
 class Ingredient(BaseModel):

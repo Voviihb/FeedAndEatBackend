@@ -1,17 +1,18 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
 import uuid, shutil, os
 from pathlib import Path
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.config import settings
 from app.models.user import User
 from app.schemas.user import ProfileUpdate, UserRead
+from app.schemas.recipe import RecipeRead
 from app.core.security import get_current_user
 
 router = APIRouter()
@@ -91,4 +92,22 @@ async def upload_my_avatar(
     await session.commit()
     await session.refresh(user)
 
-    return user 
+    return user
+
+
+@router.get("/me/recipes", response_model=List[RecipeRead])
+async def get_my_recipes(
+        limit: int = Query(20, le=100),
+        offset: int = Query(0, ge=0),
+        current_user: User = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
+):
+    from app.models.recipe import Recipe
+    res = await session.execute(
+        select(Recipe)
+        .where(Recipe.user_id == current_user.id)
+        .order_by(desc(Recipe.created_at))
+        .offset(offset)
+        .limit(limit)
+    )
+    return res.scalars().all() 
