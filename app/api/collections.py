@@ -50,11 +50,19 @@ async def get_my_collections(
     collections = res.scalars().all()
     result: List[CollectionBrief] = []
     for col in collections:
+        # Получаем картинку последнего рецепта в коллекции
+        picture_url = col.picture_url  # Начинаем с собственной картинки коллекции
+        
+        if not picture_url and col.recipes:
+            # Если у коллекции нет собственной картинки, берём картинку последнего рецепта
+            last_recipe = col.recipes[-1]  # Последний рецепт
+            picture_url = last_recipe.image_url
+        
         result.append(
             CollectionBrief(
                 id=col.id,
                 name=col.name,
-                picture_url=col.picture_url,
+                picture_url=picture_url,
                 created_at=col.created_at,
             )
         )
@@ -68,10 +76,18 @@ async def get_collection(collection_id: uuid.UUID, session: AsyncSession = Depen
     if col is None:
         raise HTTPException(status_code=404, detail="Collection not found")
     recipe_ids = [r.id for r in col.recipes]
+    
+    # Получаем картинку последнего рецепта в коллекции
+    picture_url = col.picture_url  # Начинаем с собственной картинки коллекции
+    if not picture_url and col.recipes:
+        # Если у коллекции нет собственной картинки, берём картинку последнего рецепта
+        last_recipe = col.recipes[-1]  # Последний рецепт
+        picture_url = last_recipe.image_url
+    
     return CollectionRead(
         id=col.id,
         name=col.name,
-        picture_url=col.picture_url,
+        picture_url=picture_url,
         created_at=col.created_at,
         recipe_ids=recipe_ids,
     )

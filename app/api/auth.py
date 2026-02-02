@@ -7,6 +7,7 @@ from typing import Optional
 from app.core.database import get_session
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
+from app.models.collection import Collection
 from app.schemas.user import Token, UserCreate, UserLogin
 
 router = APIRouter()
@@ -31,6 +32,11 @@ async def register(user_in: UserCreate, session: AsyncSession = Depends(get_sess
     session.add(user)
     await session.commit()
     await session.refresh(user)
+
+    # Автоматически создаём коллекцию "Избранное" для нового пользователя
+    favourites_collection = Collection(name="Избранное", owner_id=user.id)
+    session.add(favourites_collection)
+    await session.commit()
 
     access_token = create_access_token({"sub": str(user.id)})
     return Token(access_token=access_token)
