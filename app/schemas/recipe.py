@@ -47,7 +47,7 @@ class RecipeBase(BaseModel):
     image_url: Optional[str] = None
     instructions: List[Instruction]
     servings: Optional[Servings] = None
-    ingredients: List[Ingredient]
+    ingredients: Optional[List[Ingredient]] = None
     tags: Optional[List[str]] = None
     nutrients: Optional[Nutrients] = None
 
