@@ -33,6 +33,8 @@ from app.api import tags as tags_router
 app.include_router(tags_router.router, prefix="/tags", tags=["tags"])
 from app.api import devices as devices_router
 app.include_router(devices_router.router, prefix="/devices", tags=["devices"])
+from app.api import reviews as reviews_router
+app.include_router(reviews_router.router, prefix="/recipes", tags=["reviews"])
 
 # Статика для загруженных медиа (аватары и др.)
 media_path = Path(settings.MEDIA_DIR)

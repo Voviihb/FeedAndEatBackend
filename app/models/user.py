@@ -25,4 +25,5 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     recipes = relationship("Recipe", back_populates="author")
-    collections = relationship("Collection", back_populates="owner", cascade="all,delete") 
+    collections = relationship("Collection", back_populates="owner", cascade="all,delete")
+    reviews = relationship("Review", back_populates="author", cascade="all, delete-orphan")
