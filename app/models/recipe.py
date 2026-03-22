@@ -33,6 +33,7 @@ class Recipe(Base):
 
     author = relationship("User", back_populates="recipes")
     collections = relationship("Collection", secondary="collection_recipes", back_populates="recipes")
+    reviews = relationship("Review", back_populates="recipe", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Recipe {self.id} {self.name}>" 
