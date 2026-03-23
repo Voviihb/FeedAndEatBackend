@@ -1,11 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.core.database import get_session
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    get_password_hash,
+    verify_password,
+)
 from app.models.user import User
 from app.models.collection import Collection
 from app.schemas.user import Token, UserCreate, UserLogin
@@ -17,7 +24,7 @@ router = APIRouter()
 async def register(user_in: UserCreate, session: AsyncSession = Depends(get_session)):
     # Приводим email к нижнему регистру
     email_lower = user_in.email.lower()
-    
+
     # Проверяем, что email ещё не занят
     res = await session.execute(select(User).where(User.email == email_lower))
     if res.scalar():
@@ -39,7 +46,8 @@ async def register(user_in: UserCreate, session: AsyncSession = Depends(get_sess
     await session.commit()
 
     access_token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=access_token)
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return Token(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/login", response_model=Token)
@@ -52,11 +60,11 @@ async def login(user_in: UserLogin, session: AsyncSession = Depends(get_session)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     access_token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=access_token)
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return Token(access_token=access_token, refresh_token=refresh_token)
 
 
 # --- OAuth2 token endpoint ---
-
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
@@ -71,4 +79,31 @@ async def login_for_access_token(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     access_token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=access_token) 
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    return Token(access_token=access_token, refresh_token=refresh_token)
+
+
+# --- Refresh token endpoint ---
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(
+    body: RefreshRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    payload = decode_refresh_token(body.refresh_token)
+    user_id: Optional[str] = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token payload")
+
+    res = await session.execute(select(User).where(User.id == user_id))
+    user: Optional[User] = res.scalar()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive or missing user")
+
+    access_token = create_access_token({"sub": str(user.id)})
+    new_refresh_token = create_refresh_token({"sub": str(user.id)})
+    return Token(access_token=access_token, refresh_token=new_refresh_token)
