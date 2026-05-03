@@ -35,6 +35,8 @@ from app.api import devices as devices_router
 app.include_router(devices_router.router, prefix="/devices", tags=["devices"])
 from app.api import reviews as reviews_router
 app.include_router(reviews_router.router, prefix="/recipes", tags=["reviews"])
+from app.api import image_proxy as image_proxy_router
+app.include_router(image_proxy_router.router, tags=["image-proxy"])
 
 # Статика для загруженных медиа (аватары и др.)
 media_path = Path(settings.MEDIA_DIR)
